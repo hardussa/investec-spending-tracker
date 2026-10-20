@@ -1,0 +1,23 @@
+# Secrets and local configuration. NEVER commit these.
+card/env.json
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+
+# Tooling
+node_modules/
+.wrangler/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

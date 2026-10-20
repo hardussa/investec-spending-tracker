@@ -1,0 +1,22 @@
+# Cloudflare Worker configuration.
+#
+# Nothing sensitive belongs in this file. The four secrets the Worker needs
+# (ACCESS_TEAM, ACCESS_AUD, ALLOWED_EMAILS, CARD_KEY) are set with
+# `npx wrangler secret put <NAME>` and are never written to disk or git.
+# See docs/02-cloudflare-account-and-worker.md and docs/03-cloudflare-access.md.
+
+# This becomes the first part of your URL:
+#   https://<name>.<your-account-subdomain>.workers.dev
+# Letters, digits and dashes only, 63 characters or fewer.
+name = "spend-tracker"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Where all state lives. Create the namespace with:
+#   npx wrangler kv namespace create STATE
+# then paste the id it prints over the placeholder below. The placeholder is
+# deliberately invalid, so deploying without replacing it fails loudly.
+[[kv_namespaces]]
+binding = "STATE"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
