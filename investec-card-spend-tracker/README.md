@@ -1,6 +1,6 @@
 # Investec Card Spend Tracker
 
-Track your **Investec Programmable Card** spending by category on your own phone-friendly web app, hosted on **Cloudflare Workers** and protected by **Cloudflare Access** (sign in with an emailed one-time code).
+Track your **Investec Programmable Card** spending by category on your own phone-friendly web app, hosted on **Cloudflare Workers** and protected by **Cloudflare Access** (you sign in with your Google account).
 
 Every approved card transaction is reported to your own Worker, which files it under **eating out**, **holiday** or **clothing** (or ignores it). You can also log cash spend by hand, and fix any purchase that was filed in the wrong place.
 
@@ -28,21 +28,21 @@ flowchart LR
     C["Programmable card code<br/>card/main.js"]
   end
   subgraph Cloudflare
-    A1["Access app 1: path /api/card<br/>Service Auth, service token"]
-    A2["Access app 2: whole hostname<br/>Allow, emailed one-time PIN"]
+    A1["Access app 2: path /api/card<br/>Service Auth, service token"]
+    A2["Access app 1: whole hostname<br/>Allow, Google sign-in"]
     W["Worker<br/>src/worker.js"]
     KV[("KV namespace STATE")]
   end
   P["You, on your phone"]
   C -->|"after each approved transaction"| A1 --> W
-  P -->|"sign in with an emailed code"| A2 --> W
+  P -->|"sign in with Google"| A2 --> W
   W --> KV
 ```
 
 1. You pay with your card. Investec runs your card code, which **approves the transaction and then reports it** (merchant code, merchant name, amount, currency).
 2. The report goes to your Worker through a Cloudflare Access "service token" door, and is checked again with a shared secret.
 3. The Worker decides which ledger it belongs to and stores it in Cloudflare KV in **your** account.
-4. You open the web app, sign in with a code sent to your email, and see where you stand.
+4. You open the web app, sign in with your Google account, and see where you stand.
 
 More detail in [docs/01-overview.md](docs/01-overview.md).
 
@@ -53,6 +53,7 @@ More detail in [docs/01-overview.md](docs/01-overview.md).
 | An Investec account with a **programmable card** | Enrol for Investec Developer in Investec Online. See [Investec's developer site](https://developer.investec.com/). |
 | A free **Cloudflare account** | No domain required: your app lives at `https://<name>.<your-subdomain>.workers.dev`. |
 | **Cloudflare Zero Trust** (free plan) | Provides Access. Cloudflare asks for payment details to activate it even on the free plan; the free plan is not charged. |
+| **Google accounts** | One for each person using the app (a free Gmail account is fine). You also create one sign-in "OAuth client" in the Google Cloud console, once. |
 | **Node.js 22 or newer** | Wrangler 4 (Cloudflare's CLI) requires it. |
 | **Python 3.7 or newer** *(optional)* | Only for the command-line deploy script. You can paste code into Investec's IDE instead. |
 
@@ -66,7 +67,7 @@ The full, click-by-click guides are in [`docs/`](docs/). The short version:
 2. **Create a Cloudflare account** and log in: `npx wrangler login`.
 3. **Create the storage:** `npx wrangler kv namespace create STATE`, then paste the id into `wrangler.toml`.
 4. **Deploy:** `npx wrangler deploy`. Until you finish step 5 the app refuses to show anything, by design.
-5. **Set up Cloudflare Access** (team, one-time PIN login, an app for people, a service token and an app for the card) and set four Worker secrets. ([guide](docs/03-cloudflare-access.md))
+5. **Set up Google sign-in and Cloudflare Access** (a Google OAuth client, a team, an app for people, a service token and an app for the card) and set four Worker secrets. ([guide](docs/03-cloudflare-access.md))
 6. **Put the card code on your card** with the IDE or the deploy script, and fill in `env.json`. ([guide](docs/04-investec-card.md))
 7. **Simulate a transaction**, then make a small real purchase.
 
@@ -101,7 +102,7 @@ After each approved transaction the card code sends your Worker exactly this, an
 
 ## Security in one paragraph
 
-People reach the app through Cloudflare Access with an emailed one-time code. The Worker **verifies the Access token itself** (signature, expiry, issuer, audience, and that it carries an email address) instead of trusting that Access is in front of it. The card uses a separate Access door (a service token) **and** a shared secret. Every secret lives in Cloudflare's secret store or Investec's environment variables, never in this repository. Details, threat model and what to do if something leaks: [docs/06-security.md](docs/06-security.md).
+People reach the app through Cloudflare Access, signing in with a Google account (Gmail is fine); an allow-list of addresses decides who gets in. The Worker **verifies the Access token itself** (signature, expiry, issuer, audience, and that it carries an email address) instead of trusting that Access is in front of it. The card uses a separate Access door (a service token) **and** a shared secret. Every secret lives in Cloudflare's secret store or Investec's environment variables, never in this repository. Details, threat model and what to do if something leaks: [docs/06-security.md](docs/06-security.md).
 
 ## Known limitations
 

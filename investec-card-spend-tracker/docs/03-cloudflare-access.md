@@ -1,9 +1,9 @@
-# 03. Cloudflare Access: email sign-in, service token and the two Access apps
+# 03. Cloudflare Access: Google sign-in, service token and the two Access apps
 
 This is the longest guide and the one where mistakes cost the most time. Take it one step at a time and do every **Checkpoint**.
 
-**Time:** 30 to 45 minutes.
-**Starts from:** a deployed Worker (guide 02). **Ends with:** a locked-down app you can sign in to with an emailed code, and a card that can report spend.
+**Time:** 45 to 60 minutes. Google's part adds about 15 minutes.
+**Starts from:** a deployed Worker (guide 02). **Ends with:** a locked-down app you sign in to with your Google account, and a card that can report spend.
 
 > Cloudflare changes its dashboard regularly. Menu names below were checked against Cloudflare's documentation, but if a label differs slightly, find the closest match. Cloudflare's own pages, linked throughout, are the source of truth.
 
@@ -15,7 +15,7 @@ Your Worker has two kinds of visitor, and they cannot sign in the same way.
 
 | Visitor | How they prove who they are | Cloudflare feature |
 | --- | --- | --- |
-| **You** (a person, in a browser) | An emailed one-time code | An Access application with an **Allow** policy and **One-time PIN** login |
+| **You** (a person, in a browser) | Signing in with a Google account (a Gmail address is fine) | An Access application with an **Allow** policy and **Google** as the login method |
 | **The card code** (a program, no browser) | A pair of secret headers | An Access application with a **Service Auth** policy and a **service token** |
 
 So you create **two Access applications** on the same Worker address:
@@ -24,7 +24,7 @@ So you create **two Access applications** on the same Worker address:
 | --- | --- | --- |
 | Covers | the whole address: `YOUR-HOST` | only the path: `YOUR-HOST/api/card` |
 | Policy action | **Allow** | **Service Auth** |
-| Who gets in | specific email addresses | one service token |
+| Who gets in | specific Google accounts, by email address | one service token |
 
 Cloudflare applies the **most specific** matching rule first. Its documentation says path-based Access applies before broader rules, so requests to `/api/card` are judged by App 2 and everything else by App 1. You will prove this with a test at the end of the guide.
 
@@ -57,19 +57,62 @@ Reference: [Create a Zero Trust organization](https://developers.cloudflare.com/
 
 ---
 
-## Step 2: Turn on email one-time PIN sign-in
+## Step 2: Set up Google sign-in
 
-A new Zero Trust organization uses Cloudflare's own login by default. **One-time PIN is not switched on automatically**, so add it:
+People sign in with a **Google account**. A free Gmail account is fine, and Google Workspace accounts work too. Cloudflare reaches Google through an **OAuth client** that you create once in the Google Cloud console. It has three parts: create the client in Google (2a), give it to Cloudflare (2b), and test it (2c).
+
+Two things to understand first:
+
+- **Your Access policy, not Google, decides who gets in.** Cloudflare's documentation says this integration lets any user with a Google account log in *if the Access policy allows them*. You list the permitted Google addresses in Step 3. Anyone else can sign in to Google fine but is then turned away by Access.
+- **You do not need Google Workspace**, and you do not otherwise need to use Google Cloud. You only open its console to create this one client.
+
+### 2a. Create the OAuth client in Google
+
+1. Sign in to the Google Cloud console at <https://console.cloud.google.com/> with the Google account that should own the client (yours).
+2. **Create a new project**, name it something like `Spend tracker sign-in`, and select **Create**.
+3. In the project, go to **APIs & Services**, then **Credentials**, and select **Configure Consent Screen**.
+4. Configure the consent screen:
+   1. Select **Get started**.
+   2. Enter an **App name** (for example `Spend tracker`) and a **User support email**.
+   3. For **Audience**, choose **External**. Cloudflare's documentation explains that because this is not a Google Workspace organisation, External is what lets any Gmail address sign in.
+   4. Enter your **Contact information**.
+   5. Agree to Google's user data policy and select **Continue**, then **Create**.
+5. On the OAuth overview page, select **Create OAuth client**.
+6. Set **Application type** to **Web application** and give the client a name.
+7. Under **Authorized JavaScript origins**, add your team domain from Step 1:
+
+   ```
+   https://YOUR-TEAM.cloudflareaccess.com
+   ```
+
+8. Under **Authorized redirect URIs**, add **exactly** this, with the same team name:
+
+   ```
+   https://YOUR-TEAM.cloudflareaccess.com/cdn-cgi/access/callback
+   ```
+
+   A single wrong character here gives Google's `redirect_uri_mismatch` error at sign-in.
+9. Create the client, then open it. Google shows a **Client ID** and a **Client secret**. Copy both into your password manager.
+
+> **The Client secret works like a password.** Never commit it, screenshot it or share it. If it leaks, create a new one in Google and update Cloudflare (Step 2b).
+
+> **If Google later shows "access blocked", "app not verified", or `access_denied` when someone signs in:** while the consent screen is in **Testing**, Google lets only listed **test users** sign in. Add each person's Google address as a test user (in the consent screen's **Audience** settings), or publish the app. This is Google's behaviour rather than something in Cloudflare's guide, and Google's wording and menus change, so follow what Google shows on screen.
+
+### 2b. Give the client to Cloudflare
 
 1. Go to **Zero Trust**, then **Integrations**, then **Identity providers**.
-2. Under **Your identity providers**, select **Add new identity provider**.
-3. Choose **One-time PIN**.
+2. Under **Your identity providers**, select **Add new identity provider**, and choose **Google**. (Not "Google Workspace", which is for Workspace organisations and group lookups.)
+3. Paste the **Client ID** into the field Cloudflare calls **App ID**, and the **Client secret** into **Client Secret**.
+4. *(Optional)* enable PKCE. Cloudflare then uses it on every login.
+5. Select **Save**.
 
-**Checkpoint:** "One-time PIN" appears in your list of identity providers.
+### 2c. Test the connection
 
-How it works for the person signing in: they enter their email address and select **Send login code**. If their address is allowed by a policy, Cloudflare emails a PIN that is valid for 10 minutes and works once. If their address is not allowed, no email is sent, but the page still says a code was emailed. That is deliberate, so outsiders cannot discover which addresses are on your list.
+On **Integrations**, then **Identity providers**, select **Test** next to Google and complete a sign-in with your Google account.
 
-Reference: [One-time PIN login](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
+**Checkpoint:** the test completes without a Google or Cloudflare error. If you see `Error 401: deleted_client`, the OAuth client was deleted or expired in Google; recreate it and repeat 2b.
+
+Reference: [Cloudflare's Google identity provider guide](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/).
 
 ---
 
@@ -86,11 +129,13 @@ Reference: [One-time PIN login](https://developers.cloudflare.com/cloudflare-one
 6. Under **Access policies**, create a new policy:
    - **Name:** `Approved people`
    - **Action:** `Allow`
-   - **Include:** selector **Emails**, then add each person's address (yours, and anyone who should have access).
+   - **Include:** selector **Emails**, then add each person's **Google account address** (yours, and anyone who should have access).
+
+   Access compares this text with the address Google reports for the account, which is the account's main address. Enter it exactly as it appears on the Google account. An alias or a differently written variant may not match.
 
    Access applications deny everyone by default. Only a visitor who matches an Allow policy gets in.
-7. Under **login methods** (identity providers), select **One-time PIN**. Untick the others so people are not offered a login they cannot complete.
-8. Choose a **Session duration**. This is how long a sign-in lasts before the person must request a new code. Longer is more convenient; shorter is safer if a phone is lost. A few days is a sensible starting point. When a session ends the app shows "Your session ended. Sign in again to carry on."
+7. Under **login methods** (identity providers), select **Google**. Untick the others so people are not offered a login that is not set up for them.
+8. Choose a **Session duration**. This is how long a sign-in lasts before the person must sign in again, which is usually quick if they are already signed in to Google on that device. Longer is more convenient; shorter is safer if a phone is lost. A few days is a sensible starting point. When a session ends the app shows "Your session ended. Sign in again to carry on."
 9. Select **Create**.
 
 **Checkpoint:** the application appears in the Applications list.
@@ -132,7 +177,7 @@ Enter the AUD tag from Step 4.
 ```bash
 npx wrangler secret put ALLOWED_EMAILS
 ```
-Enter the same addresses as your policy, separated by commas, for example `alex@example.com,sam@example.com`. Spaces and capital letters are ignored.
+Enter the same Google addresses as your policy, separated by commas, for example `alex@example.com,sam@example.com`. Those two are placeholders (this project uses the reserved `example.com` domain so that no real address appears anywhere in it). Use the real Gmail or Google addresses. Spaces and capital letters are ignored.
 
 Why both a policy *and* `ALLOWED_EMAILS`? They are two independent locks. If the Access policy were ever loosened by mistake, the Worker would still refuse everyone not on its own list. If you leave `ALLOWED_EMAILS` empty, the Worker relies on the Access policy alone.
 
@@ -144,15 +189,15 @@ Secrets take effect within seconds; you do not need to redeploy.
 
 1. Open a **private/incognito window** (so no old sign-in interferes).
 2. Go to `https://YOUR-HOST/`.
-3. You should see Cloudflare's sign-in page. Enter an address from your policy and select **Send login code**.
-4. Check that mailbox. The email comes from Cloudflare's `notify.cloudflare.com` sender. Check spam if it does not arrive within a minute.
-5. Enter the code. The spend tracker should load.
+3. You should see Cloudflare's sign-in page. Choose **Google**.
+4. Sign in with a Google account that is on your policy.
+5. The spend tracker should load.
 
 **Checkpoint:** the app opens, and the **Setup** tab shows who you are signed in as.
 
 Now test the lock:
 
-- Try an email address that is **not** on your list. No email should arrive.
+- Sign in with a Google account that is **not** on your list. Google lets you in, but Access should refuse you and show an access-denied page, not the app.
 - Visit `https://YOUR-HOST/api/state` in a window where you are not signed in. You should be sent to the Cloudflare sign-in page, not shown any data.
 
 If something fails here, go to [07-troubleshooting.md](07-troubleshooting.md) before continuing.
@@ -161,7 +206,7 @@ If something fails here, go to [07-troubleshooting.md](07-troubleshooting.md) be
 
 ## Step 7: Create the service token for the card
 
-The card code cannot receive an emailed code, so it presents a **service token**: a Client ID and a Client Secret that Cloudflare issues.
+The card code cannot sign in with Google, so it presents a **service token**: a Client ID and a Client Secret that Cloudflare issues.
 
 1. Go to **Zero Trust**, then **Access controls**, then **Service credentials**, then **Service Tokens**.
 2. Select **Create Service Token**.
@@ -272,11 +317,13 @@ You now have what the card needs. Continue to [04. Investec card setup](04-inves
 
 **Other addresses reach the same Worker.** Besides your `workers.dev` address, Cloudflare Workers also have preview and version URLs on different hostnames. A hostname-based Access application does not cover those. They expose nothing: the Worker checks the Access token itself, so `/api/*` refuses unauthenticated callers on any address, and `/api/card` still needs the shared secret. For extra assurance you can also protect previews with Cloudflare's Worker-level Access ("Previews only"); see [Cloudflare's Workers Access documentation](https://developers.cloudflare.com/workers/configuration/cloudflare-access/).
 
-**Adding or removing a person.** Edit the `Approved people` policy in App 1, and update `ALLOWED_EMAILS` with `npx wrangler secret put ALLOWED_EMAILS`. Do both.
+**Adding or removing a person.** Edit the `Approved people` policy in App 1, and update `ALLOWED_EMAILS` with `npx wrangler secret put ALLOWED_EMAILS`. Do both. If your Google consent screen is still in **Testing** (Step 2a), also add the new person's address as a **test user** in Google, or they will be stopped by Google before Access ever sees them.
 
 **Rotating the service token.** Create a new token, update App 2's policy to use it, put the new ID and secret into the card's `env.json`, then delete the old token. Do this before the old one expires.
 
-**Signing in on a new phone.** Open the address, request a code, enter it. You can then add the page to your home screen.
+**Signing in on a new phone.** Open the address, choose Google and pick the account. You can then add the page to your home screen.
+
+**Two-step verification.** Anyone who can sign in to an allowed Google account can open the app, so every allowed account should have Google's 2-Step Verification turned on. See [06-security.md](06-security.md).
 
 ---
 
@@ -287,6 +334,18 @@ Cloudflare also lets you protect a Worker directly: in **Workers & Pages**, sele
 If you use this route you still need **App 2** (Steps 7 and 8) for the card, and you must take the **AUD tag from the Access application that protects the people**, wherever you find it. Cloudflare documents the hierarchy as hostname- or path-based Access first, then Worker-level Access, so App 2 still takes precedence for `/api/card`.
 
 Details: [Cloudflare Access for Workers](https://developers.cloudflare.com/workers/configuration/cloudflare-access/).
+
+---
+
+## Appendix B: Alternative, emailed one-time codes instead of Google
+
+The Worker only needs the signed Access token to carry an email address, so it does not care how people sign in. If you would rather not set up Google, Cloudflare's **One-time PIN** works instead: people enter their email address, Cloudflare emails a code that is valid for 10 minutes, and they type it in.
+
+1. Skip Step 2. Instead, go to **Zero Trust**, then **Integrations**, then **Identity providers**, select **Add new identity provider** and choose **One-time PIN**. (It is not switched on by default in a new organization.)
+2. In Step 3, select **One-time PIN** as App 1's login method.
+3. Everything else is identical.
+
+If you choose this, change the sign-in screen's wording in `src/worker.js`, which says "Google" in four places ([08-customising.md](08-customising.md#names-and-wording)). Cloudflare's reference: [One-time PIN login](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
 
 ---
 

@@ -124,6 +124,7 @@ The state, routes, move, rules, duplicate detection and card reporting all work 
 | The default monthly eating-out budget | `settings.monthlyBudget` in `BLANK` (3000 by default) |
 | The default monthly amount for each pot | `defaultMonthly` in `POTS` |
 | How names are shown for signed-in people | `shortName` (first part of the email before the `@`) |
+| The sign-in screen's Google wording (if you switch identity provider, see [guide 03, Appendix B](03-cloudflare-access.md#appendix-b-alternative-emailed-one-time-codes-instead-of-google)) | The `#gate` block in the `PAGE` string ("Sign in with Google", "Checking your Google sign-in", and the help line), and the "Sign out of Google here" button in Setup |
 
 Any text you add to the page goes inside a JavaScript template literal. Avoid backticks and `${` in client code. Keep quotes escaped as the surrounding code does.
 

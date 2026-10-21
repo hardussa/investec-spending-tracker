@@ -152,6 +152,8 @@ const now = () => Math.floor(Date.now() / 1000);
   const page2 = await h.send('/');
   const csp = page1.headers.get('content-security-policy') || '';
   check('the page is served', page1.status === 200 && /<title>/i.test(page1.text));
+  check('the sign-in screen is worded for Google sign-in',
+    /Sign in with Google/.test(page1.text) && /Google account/.test(page1.text) && /Sign out of Google here/.test(page1.text));
   check('CSP denies everything by default', /default-src 'none'/.test(csp));
   check('CSP allows scripts only by nonce', /script-src 'nonce-[a-f0-9]+'/.test(csp));
   check('CSP has no unsafe-inline or unsafe-eval', !/unsafe-inline|unsafe-eval/.test(csp), csp);

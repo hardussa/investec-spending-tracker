@@ -16,7 +16,7 @@ Thanks for helping. This is a small project with a strong bias toward being safe
 
 ```bash
 git clone <your fork>
-cd investec-card-spend-tracker
+cd investec-spending-tracker
 npm install
 npm test
 python -m unittest discover -s test -p "test_*.py"

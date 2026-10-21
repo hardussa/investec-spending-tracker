@@ -8,7 +8,7 @@ This project handles your spending data, so the security model is documented in 
 
 | # | Layer | What it stops |
 | --- | --- | --- |
-| 1 | **Cloudflare Access, people app.** Emailed one-time PIN, Allow policy listing specific addresses. | Anyone who is not on your list reaching the app at all. |
+| 1 | **Cloudflare Access, people app.** Google sign-in, Allow policy listing specific Google accounts. | Anyone who is not on your list reaching the app at all. |
 | 2 | **The Worker verifies the Access token itself.** | A mistake in layer 1 (a loosened policy, a misrouted hostname) becoming open access. |
 | 3 | **`ALLOWED_EMAILS`.** A second, independent allow-list inside the Worker. | The same mistake, from a different direction. |
 | 4 | **Cloudflare Access, card app.** Service Auth with one service token, scoped to `/api/card`. | Anyone without the token reaching the card endpoint. |
@@ -78,6 +78,7 @@ Stored in your KV namespace: those fields, plus the date, a random id, and wheth
 | `cfAccessClientId` / `cfAccessClientSecret` | Cloudflare (shown once) | The card's `env.json` | Anyone with access to your Investec developer area |
 | `ACCESS_TEAM`, `ACCESS_AUD` | Cloudflare | Worker secrets | Not secret in themselves (identifiers); treated as private config |
 | `ALLOWED_EMAILS` | You | Worker secret | Anyone with your Cloudflare account |
+| Google OAuth client ID and secret | You, in the Google Cloud console | Cloudflare's Google identity-provider settings, and your password manager | Anyone with your Cloudflare account or your Google Cloud project |
 | Investec client id, secret, API key | Investec | Your shell session (script only) | You. They are never written to disk by this project. |
 | Cloudflare account login | You | Your password manager | You |
 
@@ -89,7 +90,7 @@ Stored in your KV namespace: those fields, plus the date, a random id, and wheth
 
 Honest limits:
 
-- **Your email account.** Sign-in is "whoever can read your email". If an allowed mailbox is compromised, so is the app. Use strong unique passwords and two-factor authentication on those mailboxes, and keep the policy list short.
+- **Your Google accounts.** Sign-in is "whoever can sign in to an allowed Google account". If one of those accounts is compromised, so is the app. Turn on Google's **2-Step Verification** for every allowed account, use strong unique passwords, and keep the policy list short. Note that the Google sign-in step itself is open to any Google account (the consent screen is "External"); it is the Access policy and `ALLOWED_EMAILS` that turn everyone else away.
 - **Your Cloudflare account.** Whoever controls it controls the Worker, the secrets and the data. Turn on two-factor authentication.
 - **Your Investec developer area.** The card's environment variables, including the shared secret and service-token secret, are visible to anyone who can open the IDE for that card. Do not screenshot it.
 - **A lost, unlocked phone with an active session.** A signed-in browser keeps working until the Access session expires. Choose a session length you are comfortable with, and revoke sessions from Cloudflare if a phone is lost.
@@ -109,7 +110,8 @@ Why the other addresses are harmless: the Worker re-verifies the Access token fo
 | **`CARD_KEY`** | Generate a new one. `npx wrangler secret put CARD_KEY`. Update the card's `env.json` and push it. The service token still protects the endpoint in the meantime. |
 | **Service token secret** | Create a new service token. Point App 2's policy at it. Update the card's `env.json`. Delete the old token. The shared secret still protects the endpoint in the meantime. |
 | **Both of the above** | Do both, immediately. Then look through your entries for anything you do not recognise, and use a snapshot if you need to roll back. |
-| **An allowed email account** | Remove that address from the `Approved people` policy **and** from `ALLOWED_EMAILS`. Revoke sessions in Cloudflare. Review your data. |
+| **An allowed Google account** | Remove that address from the `Approved people` policy **and** from `ALLOWED_EMAILS`. Revoke sessions in Cloudflare. Secure or recover the Google account. Review your data. |
+| **Google OAuth client secret** | In the Google Cloud console, create a new secret (or a new OAuth client), enter it in Cloudflare's Google identity-provider settings, and delete the old one. |
 | **Investec API credentials** | Revoke or regenerate the API key in Investec Online. Ask Investec how to rotate a client secret. |
 | **Cloudflare login** | Change the password, enable two-factor authentication, review the account's tokens and sessions, then rotate every secret in this table. |
 | **A secret committed to Git** | Treat it as **public and compromised**, even if you delete the commit. Rotate it first. Removing it from history is secondary. |
@@ -153,4 +155,4 @@ See [SECURITY.md](../SECURITY.md). Please report privately, not in a public issu
 
 ## A note on terms of use
 
-This project makes outbound calls from Investec's programmable card platform to a server you control. Read Investec's programmable banking terms and developer documentation, and Cloudflare's terms for Workers, Access and Zero Trust, and make sure your use complies. This project's authors cannot advise on that.
+This project makes outbound calls from Investec's programmable card platform to a server you control. Read Investec's programmable banking terms and developer documentation, Cloudflare's terms for Workers, Access and Zero Trust, and Google's terms for the Google Cloud console and Google sign-in, and make sure your use complies. This project's authors cannot advise on that.

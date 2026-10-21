@@ -7,10 +7,12 @@
    Worker decides which ledger it belongs to: eating out, holiday
    or clothing. See "allocation" below.
 
-   Identity is Cloudflare Access (an emailed one-time PIN, or any
-   identity provider that supplies an email address). There is no
+   Identity is Cloudflare Access (Google sign-in). There is no
    passphrase. The Worker verifies the Access JWT itself rather
-   than trusting that Access is in front of it.
+   than trusting that Access is in front of it. Any Google account
+   works, Gmail or Google Workspace. The Worker only needs the
+   signed token to carry an email address, so another identity
+   provider that supplies one would work too.
 
    Bindings required (see docs/02 and docs/03):
      KV namespace  STATE
@@ -18,7 +20,8 @@
                                     .cloudflareaccess.com
      Secret        ACCESS_AUD       Application Audience (AUD) tag of
                                     the Access app that protects the UI
-     Secret        ALLOWED_EMAILS   comma-separated, e.g.
+     Secret        ALLOWED_EMAILS   comma-separated Google account
+                                    addresses, e.g.
                                     alex@example.com,sam@example.com
                                     (recommended; empty = rely on the
                                     Access policy alone)
@@ -952,9 +955,9 @@ white-space:nowrap;vertical-align:1px}
 
 <div id="gate" class="gate">
   <h2 style="font-family:var(--disp);font-size:23px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px">Eating out</h2>
-  <p class="sub" id="gateMsg">Checking your sign-in&hellip;</p>
-  <button class="btn hide" id="signIn">Sign in</button>
-  <p class="note hide" id="gateHelp">Cloudflare Access will ask you to sign in. Only approved email addresses can get in.</p>
+  <p class="sub" id="gateMsg">Checking your Google sign-in&hellip;</p>
+  <button class="btn hide" id="signIn">Sign in with Google</button>
+  <p class="note hide" id="gateHelp">Access will ask for your Google account. Only the addresses on the allow list can get in.</p>
 </div>
 
 <div id="app" class="hide">
@@ -1142,7 +1145,7 @@ white-space:nowrap;vertical-align:1px}
     <div class="card">
       <h2>Signed in</h2>
       <p class="sub">You are <span id="whoIs" class="tag"></span> on this phone.</p>
-      <button class="btn ghost" id="signOut">Sign out</button>
+      <button class="btn ghost" id="signOut">Sign out of Google here</button>
       <p class="note">Access ends the session for this device. Meals you logged keep your name on them.</p>
     </div>
   </section>

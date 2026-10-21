@@ -16,7 +16,7 @@ You need:
 - A computer with a terminal (macOS Terminal, Linux, or on Windows **Git Bash** or **WSL**).
 - **Node.js 22 or newer.** Check with `node --version`. Wrangler, Cloudflare's command-line tool, requires Node 22+. Install the current LTS release from [nodejs.org](https://nodejs.org/), ideally through a version manager such as [nvm](https://github.com/nvm-sh/nvm) or [Volta](https://volta.sh/) to avoid permission problems.
 - **Git**, to download this project.
-- An email address you can receive mail at.
+- A **Google account** (a free Gmail account is fine) for yourself and for each person who will use the app. Guide 03 uses it to set up sign-in.
 - A password manager. You will generate several secrets and should store each one properly.
 
 ---
@@ -37,8 +37,8 @@ You do **not** need to add a website or buy a domain. Every Worker gets a free a
 ## Step 2: Get the code
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/investec-card-spend-tracker.git
-cd investec-card-spend-tracker
+git clone https://github.com/hardussa/investec-spending-tracker.git
+cd investec-spending-tracker
 npm install
 ```
 

@@ -53,8 +53,8 @@ sequenceDiagram
   participant W as Worker
   participant KV as KV storage
   You->>CF: open the address
-  CF-->>You: sign-in page: enter email, receive a one-time code
-  You->>CF: enter the code
+  CF-->>You: sign-in page with a Google button
+  You->>CF: sign in with your Google account
   CF->>W: request with a signed Access token
   W->>W: verify signature, expiry, issuer, audience, email
   W->>KV: read state
@@ -69,7 +69,7 @@ The Worker does **not** assume that Access is in front of it. It verifies the si
 
 Cloudflare Access protects the Worker with two separate applications, because people and programs sign in differently:
 
-- **App 1, people:** the whole hostname, policy **Allow** for specific emails, login by emailed one-time PIN.
+- **App 1, people:** the whole hostname, policy **Allow** for specific emails, login with Google.
 - **App 2, card:** only `/api/card`, policy **Service Auth** for one service token.
 
 Cloudflare applies the most specific matching application first, so App 2 judges the card's requests and App 1 judges everything else. A service token has no email address and so can never sign in as a person, and a person's session cookie is not accepted on the card path. Step-by-step setup: [03-cloudflare-access.md](03-cloudflare-access.md).

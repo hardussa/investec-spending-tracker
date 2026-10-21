@@ -36,7 +36,7 @@ In scope:
 Out of scope:
 
 - Vulnerabilities in Cloudflare, Investec or other third-party services themselves. Please report those to the vendor.
-- Issues that require control of your Cloudflare account, your Investec developer area or an allowed email account. Those are listed as known limits in [docs/06-security.md](docs/06-security.md).
+- Issues that require control of your Cloudflare account, your Investec developer area or an allowed Google account. Those are listed as known limits in [docs/06-security.md](docs/06-security.md).
 - Reports about a deployment you misconfigured, where the documented setup was not followed.
 
 ## Supported versions

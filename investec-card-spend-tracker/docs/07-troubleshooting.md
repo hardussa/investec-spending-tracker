@@ -111,15 +111,36 @@ Access accepted you but the Worker rejected the token. In order of likelihood:
 
 The Worker deliberately returns a generic "not signed in" and does not say which check failed, so an attacker learns nothing. Work through the list.
 
-### The one-time code email never arrives
+### Google shows `Error 400: redirect_uri_mismatch`
 
-- If the address is **not in the Access policy, no email is sent**, and the page still says a code was emailed. By design. Check the spelling in the policy.
-- Check spam. The sender domain is `notify.cloudflare.com`. If your mail provider or company gateway scans or blocks it, allow that domain.
-- Wait a minute before requesting another. A new code invalidates the previous one.
+The **Authorized redirect URI** in your Google OAuth client does not exactly match what Cloudflare sends. It must be, character for character:
 
-### "This One-Time PIN has already been used"
+```
+https://YOUR-TEAM.cloudflareaccess.com/cdn-cgi/access/callback
+```
 
-An email security tool followed the link in the message before you did, which consumes the code. Select **Request new code** and try again. If it keeps happening, allow Cloudflare's sender through your mail scanning.
+Check the team name spelling, that it starts with `https://`, and that there is no trailing slash or stray space. The **Authorized JavaScript origin** should be `https://YOUR-TEAM.cloudflareaccess.com`. Fix it in the Google Cloud console ([guide 03, Step 2a](03-cloudflare-access.md#step-2-set-up-google-sign-in)); changes can take a few minutes to apply.
+
+### Google shows `Error 401: deleted_client`
+
+The OAuth client was deleted, or has expired, in Google. Create a new one and enter its Client ID and secret again in Cloudflare (Step 2a and 2b of the same guide).
+
+### Google says "access blocked", "app not verified" or `access_denied`
+
+While the OAuth consent screen is in **Testing**, Google lets only listed **test users** sign in. Add that person's Google address as a test user in the consent screen's **Audience** settings, or publish the app. This is Google's behaviour, and its menus and wording change, so follow what Google shows.
+
+### I signed in with Google, but Access says I am not allowed
+
+Google accepted you; the **Access policy** did not. In order of likelihood:
+
+1. **Wrong Google account.** If a browser is signed in to several Google accounts, it may pick the one that is not on your list. Try a private window and choose the account explicitly.
+2. **The address is not on the `Approved people` policy**, or is written differently (an alias, or a different Google account). Use the account's main address.
+3. **The policy is on the wrong app.** It belongs on App 1, the people app, not the card app.
+4. To see exactly which email Access received, open **Zero Trust**, then **Logs**, then **Access authentication logs**.
+
+### The Test button in the identity providers list fails
+
+Check that the Google **Client ID** went into Cloudflare's **App ID** field and the **Client secret** into **Client Secret**, with no spaces before or after, and that you chose **Google** rather than "Google Workspace".
 
 ### I can sign in to App 1, but I want it to ask me every time
 
